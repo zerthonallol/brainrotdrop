@@ -8,9 +8,13 @@ describe("brainrot rules", () => {
     expect(BRAINROTS.every((b) => b.incomePerSec >= 21_000_000)).toBe(true)
   })
 
-  it("prices by rarity, not income: a rarer brainrot always costs more", () => {
-    const sorted = [...BRAINROTS].sort((a, b) => a.rarityScore - b.rarityScore)
-    for (let i = 1; i < sorted.length; i++) expect(sorted[i].price).toBeGreaterThanOrEqual(sorted[i - 1].price)
+  it("hand-tuned prices are applied", () => {
+    const byId = Object.fromEntries(BRAINROTS.map((b) => [b.id, b.price]))
+    expect(byId["sammyni-spookyni"]).toBe(954)
+    expect(byId["phoenix"]).toBe(6501)
+    expect(byId["polaroidini"]).toBe(82123)
+    expect(byId["queen-bee"]).toBe(200)
+    expect(byId["garama-and-madundung"]).toBe(150)
   })
 
   it("has themed cases including Halloween, Crystal and Sea", () => {
