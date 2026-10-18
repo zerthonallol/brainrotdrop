@@ -201,7 +201,7 @@ function CaseModal({ c, onClose }: { c: CaseDef; onClose: () => void }) {
           </button>
         </div>
 
-        <div ref={viewport} className="relative mt-5 h-[172px] overflow-hidden rounded-2xl border border-white/8 bg-black/40">
+        <div ref={viewport} className="relative mt-5 h-[172px] shrink-0 overflow-hidden rounded-2xl border border-white/8 bg-black/40">
           <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[3px] -translate-x-1/2 bg-[var(--bd-lime)] shadow-[0_0_16px_var(--bd-lime)]" />
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-[#07040f] to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-[#07040f] to-transparent" />
