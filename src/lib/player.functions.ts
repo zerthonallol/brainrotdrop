@@ -34,10 +34,10 @@ export const loadPlayer = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ initData: z.string().max(4096) }).parse(d))
   .handler(async ({ data }) => {
     const u = await auth(data.initData)
-    if (!u) return { ok: false as const, state: null }
+    if (!u) return { ok: false, state: null as string | null }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server")
     const { data: row } = await supabaseAdmin.from("players").select("state").eq("tg_id", u.id).maybeSingle()
-    return { ok: true as const, state: (row?.state ?? null) as Record<string, unknown> | null }
+    return { ok: true, state: row?.state ? JSON.stringify(row.state) : null }
   })
 
 export const savePlayer = createServerFn({ method: "POST" })

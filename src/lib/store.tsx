@@ -114,7 +114,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!app) return
       try {
         const res = await loadPlayer({ data: { initData: app.initData } })
-        const remote = res.state as Partial<SavedState> | null
+        const remote = (res.state ? JSON.parse(res.state) : null) as Partial<SavedState> | null
         if (!cancelled && remote && (remote.savedAt ?? 0) >= (local?.savedAt ?? 0)) apply(remote)
       } catch (e) {
         console.error("loadPlayer failed", e)
