@@ -13,7 +13,19 @@ import { CrashView } from '@/components/casino/CrashView'
 import { ProfileView } from '@/components/casino/ProfileView'
 import { BrainrotImg, Coin, CoinAmount, IncomeTag, cdnImage } from '@/components/casino/ui'
 
-export const Route = createFileRoute('/')({ component: App })
+export const Route = createFileRoute('/')({
+  head: () => ({
+    meta: [
+      { title: 'BrainrotDrop — кейсы с брейнротами' },
+      { name: 'description', content: 'Telegram Mini App: открывай тематические кейсы и выбивай брейнротов из Steal a Brainrot' },
+      { property: 'og:title', content: 'BrainrotDrop — кейсы с брейнротами' },
+      { property: 'og:description', content: 'Хеллуин, Кристальный, Морская братва и другие кейсы с брейнротами из Steal a Brainrot' },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+  }),
+  component: App,
+})
 
 type TabId = 'cases' | 'upgrade' | 'dice' | 'crash' | 'profile'
 

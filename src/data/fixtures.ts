@@ -21,9 +21,7 @@ export const DEMO_USER: DemoUser = {
   username: "brainrot_guest",
 }
 
-export const DEMO_START_BALANCE = 750
 export const DEMO_INVITED_FRIENDS = 1
-export const DEMO_START_INVENTORY = ["tralaledon", "esok-sekolah", "ketupat-kepat"]
 
 const NAMES = ["Kirill", "Mila", "Den4ik", "Sasha_RB", "Lexa", "Vanya228", "Nastya", "Timur", "Egor", "Polina"]
 
