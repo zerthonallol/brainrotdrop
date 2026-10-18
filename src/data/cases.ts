@@ -1,4 +1,4 @@
-import { BRAINROTS, BRAINROT_BY_ID, type Brainrot } from "./brainrots"
+import { BRAINROTS, BRAINROT_BY_ID, type Brainrot, type Tier } from "./brainrots"
 
 export type Drop =
   | { kind: "coins"; amount: number }
@@ -29,8 +29,9 @@ export function dropValue(d: Drop) {
   return d.kind === "coins" ? d.amount : (BRAINROT_BY_ID[d.id]?.price ?? 0)
 }
 
-const byIncome = (minM: number, maxM: number) =>
-  BRAINROTS.filter((b) => b.incomePerSec >= minM * 1e6 && b.incomePerSec <= maxM * 1e6)
+const byTier = (...tiers: Tier[]) => BRAINROTS.filter((b) => tiers.includes(b.tier))
+const byIds = (ids: string[]) => ids.map((id) => BRAINROT_BY_ID[id]).filter(Boolean)
+const byCats = (cats: string[]) => BRAINROTS.filter((b) => b.obtain.some((o) => cats.includes(o)))
 
 const coins = (amount: number): Drop => ({ kind: "coins", amount })
 const rot = (b: Brainrot): Drop => ({ kind: "brainrot", id: b.id })
@@ -69,19 +70,38 @@ function split(coinDrops: number[], coinShare: number, rots: Brainrot[]): CaseEn
   ]
 }
 
-const cover = (id: string) => BRAINROT_BY_ID[id].image
+const cover = (id: string) => BRAINROT_BY_ID[id]?.image ?? BRAINROTS[0].image
+const art = (name: string) => `/img/cases/${name}.webp`
+
+// Paid case price sits between the cheapest drop and the average drop value, then
+// balance() tunes weights to 92% RTP — so rarer brainrots inside are always rarer to hit.
+function paid(id: string, name: string, subtitle: string, accent: string, coverImg: string, rots: Brainrot[]): CaseDef {
+  const vals = rots.map((r) => r.price)
+  const min = Math.min(...vals)
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+  const price = Math.max(49, Math.round(Math.sqrt(min * mean) / 10) * 10 - 1)
+  const coin = Math.max(10, Math.round((price * 0.35) / 5) * 5)
+  return { id, name, subtitle, kind: "paid", price, accent, cover: coverImg, entries: balance([coins(coin), ...rots.map(rot)], price) }
+}
+
+const HALLOWEEN = ["la-spooky-grande", "mieteteira-bicicleteira", "oni-oni-panda", "eviledon", "boo-boo-rocket", "sammyni-spookyni", "spooky-and-pumpky", "flying-dutchman", "plant-bros", "dragon-skeletonini", "phoenix", "headless-horseman", "bat-in-the-box", "skelly-and-coffy", "medusini-and-demonini", "draculino", "la-casa-boo", "cerberus", "guest-666"]
+const SEA = ["tralaledon", "los-primos", "eviledon", "orcaledon", "fishino-clownino", "capitano-moby", "jelly-moby", "digi-narwhal", "dragon-aquanini", "abyssaloco", "moby-bros", "hydra-serpent", "capitano-gullini", "chicleteira-surfeiteira"]
+const CRYSTAL = ["nachorilla", "pretzo-robo", "grabatron", "la-fuse-machine", "bumbatron", "celestial-pegasus", "digi-narwhal", "arcadragon", "rubrikiko", "griffin", "phoenix", "orchidox", "hydra-dragon-cannelloni"]
+const CHRISTMAS = ["los-candies", "money-money-reindeer", "la-jolly-grande", "festive-67", "ginger-gerat", "la-ginger-sekolah", "reinito-sleighito", "cooki-and-milki", "chicleteira-noelteira", "chimnino", "yetimatic"]
+const SPRING = ["churrito-bunnito", "hopilikalika-hopilikalako", "la-easter-grande", "quackini-snackini", "boppin-bunny", "bunny-and-eggy", "hydra-bunny", "lovin-rose", "la-romantic-grande", "rosetti-tualetti", "love-love-bear", "rosey-and-teddy", "chicleteira-cupideira", "gold-gold-gold", "cloverat-clapat", "fortunu-and-cashuru"]
+const SUMMER = ["capitano-gullini", "los-fruits", "sand-sand-sand", "coco-and-mango", "venuspino", "dragon-aquanini", "honey-honey-bear", "pop-pop-petalini", "queen-bee", "s-more-serat", "bumbatron", "orchidox", "la-summer-grande"]
 
 export const CASES: CaseDef[] = [
   {
     id: "free",
     name: "Бесплатный",
-    subtitle: "Раз в 24 часа · 1% на редкого брейнрота",
+    subtitle: "Раз в 24 часа · шанс на Secret брейнрота",
     kind: "free",
     price: 0,
     cooldownHours: 24,
     accent: "#22c55e",
     cover: cover("money-money-puggy"),
-    entries: split([5, 10, 15, 25, 40], 0.99, byIncome(21, 30)),
+    entries: split([5, 10, 15, 25, 40], 0.97, byTier("rare")),
   },
   {
     id: "tag",
@@ -92,7 +112,7 @@ export const CASES: CaseDef[] = [
     cooldownHours: 24,
     accent: "#38bdf8",
     cover: cover("los-bros"),
-    entries: split([20, 40, 60, 100, 150], 0.8, byIncome(21, 40)),
+    entries: split([20, 40, 60, 100, 150], 0.85, byTier("rare", "epic")),
   },
   {
     id: "referral",
@@ -103,58 +123,18 @@ export const CASES: CaseDef[] = [
     cooldownHours: 12,
     accent: "#f472b6",
     cover: cover("los-puggies"),
-    entries: split([30, 60, 100, 150, 200], 0.7, byIncome(21, 50)),
+    entries: split([30, 60, 100, 150, 200], 0.75, byTier("rare", "epic")),
   },
-  {
-    id: "trash",
-    name: "Мусорный",
-    subtitle: "Брейнроты 21–35M/s",
-    kind: "paid",
-    price: 199,
-    accent: "#84cc16",
-    cover: cover("tralaledon"),
-    entries: balance([coins(40), coins(90), ...byIncome(21, 35).map(rot)], 199),
-  },
-  {
-    id: "sahur",
-    name: "Сахур",
-    subtitle: "Брейнроты 30–75M/s",
-    kind: "paid",
-    price: 449,
-    accent: "#a855f7",
-    cover: cover("tictac-sahur"),
-    entries: balance([coins(150), ...byIncome(30, 75).map(rot)], 449),
-  },
-  {
-    id: "combinasion",
-    name: "Комбинасьон",
-    subtitle: "Брейнроты 50–200M/s",
-    kind: "paid",
-    price: 999,
-    accent: "#f59e0b",
-    cover: cover("la-supreme-combinasion"),
-    entries: balance([coins(300), ...byIncome(50, 200).map(rot)], 999),
-  },
-  {
-    id: "dragon",
-    name: "Драконий",
-    subtitle: "Брейнроты 150–425M/s",
-    kind: "paid",
-    price: 2499,
-    accent: "#ef4444",
-    cover: cover("hydra-dragon-cannelloni"),
-    entries: balance([coins(900), ...byIncome(150, 425).map(rot)], 2499),
-  },
-  {
-    id: "og",
-    name: "OG Легенды",
-    subtitle: "Брейнроты 300M–1B/s",
-    kind: "paid",
-    price: 5999,
-    accent: "#f472b6",
-    cover: cover("strawberry-elephant"),
-    entries: balance([coins(2500), ...byIncome(300, 1000).map(rot)], 5999),
-  },
+  paid("secret", "Секретный", "Обычные Secret брейнроты", "#38bdf8", cover("tralaledon"), byTier("rare")),
+  paid("lucky", "Лаки Кэтч", "Secret + редкие", "#a855f7", cover("tictac-sahur"), byTier("rare", "epic")),
+  paid("sea", "Морская братва", "Акулы, рыбы и капитаны", "#0ea5e9", art("sea"), byIds(SEA)),
+  paid("halloween", "Хеллуин", "Тыквы, скелеты и призраки", "#f97316", art("halloween"), byIds(HALLOWEEN)),
+  paid("christmas", "Рождество", "Новогодние брейнроты", "#ef4444", art("christmas"), byIds(CHRISTMAS)),
+  paid("spring", "Весна и любовь", "Пасха, Валентин и Патрик", "#f9a8d4", art("spring"), byIds(SPRING)),
+  paid("summer", "Лето и пчёлы", "Солнце, фрукты и мёд", "#facc15", art("summer"), byIds(SUMMER)),
+  paid("crystal", "Кристальный", "Роботы, драконы и небесные", "#22d3ee", art("crystal"), byIds(CRYSTAL)),
+  paid("admin", "Админ Абуз", "Только с Admin Abuse ивентов", "#dc2626", art("admin"), byCats(["Admin Abuse"])),
+  paid("og", "OG Легенды", "Эксклюзивы и OG", "#f472b6", art("og"), byTier("mythic", "og")),
 ]
 
 export function rollCase(c: CaseDef): Drop {
