@@ -3,12 +3,24 @@ import { BRAINROT_BY_ID } from "@/data/brainrots"
 import { TAG, type CaseDef, type Drop } from "@/data/cases"
 import {
   DEMO_INVITED_FRIENDS,
-  DEMO_START_BALANCE,
-  DEMO_START_INVENTORY,
   DEMO_USER,
   type DemoUser,
 } from "@/data/fixtures"
-import { initTelegram } from "./telegram"
+import { initTelegram, tg } from "./telegram"
+import { loadPlayer, savePlayer } from "./player.functions"
+
+// New players start from zero: no coins, no brainrots.
+export const START_BALANCE = 0
+const LS_KEY = "brainrotdrop:state:v2"
+const SAVE_EVERY_MS = 5000
+
+interface SavedState {
+  balance: number
+  inventory: InvItem[]
+  requests: TransferRequest[]
+  cooldowns: Record<string, number>
+  savedAt: number
+}
 
 export interface InvItem {
   uid: string
@@ -54,10 +66,8 @@ const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<DemoUser>(DEMO_USER)
   const [inTelegram, setInTelegram] = useState(false)
-  const [balance, setBalance] = useState(DEMO_START_BALANCE)
-  const [inventory, setInventory] = useState<InvItem[]>(() =>
-    DEMO_START_INVENTORY.map((id, i) => ({ uid: "seed" + i, brainrotId: id, obtainedAt: 0, status: "owned" })),
-  )
+  const [balance, setBalance] = useState(START_BALANCE)
+  const [inventory, setInventory] = useState<InvItem[]>([])
   const [requests, setRequests] = useState<TransferRequest[]>([])
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({})
 
@@ -77,6 +87,80 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     attempt()
     return () => clearTimeout(timer)
   }, [])
+
+  // ---- persistence: restore once, then autosave every 5s and when the app is hidden ----
+  const [loaded, setLoaded] = useState(false)
+  const apply = useCallback((st: Partial<SavedState> | null | undefined) => {
+    if (!st) return
+    if (typeof st.balance === "number") setBalance(st.balance)
+    if (Array.isArray(st.inventory)) setInventory(st.inventory.filter((i) => BRAINROT_BY_ID[i.brainrotId]))
+    if (Array.isArray(st.requests)) setRequests(st.requests)
+    if (st.cooldowns && typeof st.cooldowns === "object") setCooldowns(st.cooldowns)
+  }, [])
+
+  useEffect(() => {
+    let local: SavedState | null = null
+    try {
+      const raw = localStorage.getItem(LS_KEY)
+      if (raw) local = JSON.parse(raw)
+    } catch {
+      /* ignore */
+    }
+    apply(local)
+    let cancelled = false
+    const waitTg = async () => {
+      for (let i = 0; i < 30 && !tg(); i++) await new Promise((r) => setTimeout(r, 100))
+      const app = tg()
+      if (!app) return
+      try {
+        const res = await loadPlayer({ data: { initData: app.initData } })
+        const remote = res.state as Partial<SavedState> | null
+        if (!cancelled && remote && (remote.savedAt ?? 0) >= (local?.savedAt ?? 0)) apply(remote)
+      } catch (e) {
+        console.error("loadPlayer failed", e)
+      }
+    }
+    waitTg().finally(() => !cancelled && setLoaded(true))
+    return () => {
+      cancelled = true
+    }
+  }, [apply])
+
+  const snapshot = useRef<SavedState | null>(null)
+  snapshot.current = { balance, inventory, requests, cooldowns, savedAt: Date.now() }
+  const lastSent = useRef("")
+
+  const persist = useCallback(() => {
+    const st = snapshot.current
+    if (!st) return
+    const body = JSON.stringify({ ...st, savedAt: 0 })
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(st))
+    } catch {
+      /* ignore */
+    }
+    if (body === lastSent.current) return
+    const app = tg()
+    if (!app) return
+    lastSent.current = body
+    savePlayer({ data: { initData: app.initData, state: st as unknown as Record<string, unknown> } }).catch((e) => {
+      lastSent.current = ""
+      console.error("savePlayer failed", e)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!loaded) return
+    const t = setInterval(persist, SAVE_EVERY_MS)
+    const onHide = () => document.visibilityState === "hidden" && persist()
+    document.addEventListener("visibilitychange", onHide)
+    window.addEventListener("pagehide", persist)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener("visibilitychange", onHide)
+      window.removeEventListener("pagehide", persist)
+    }
+  }, [loaded, persist])
 
   const hasTag = `${user.firstName} ${user.lastName ?? ""}`.toLowerCase().includes(TAG)
 
