@@ -13,7 +13,8 @@ export function formatCoins(n: number) {
 }
 
 export function cdnImage(src: string, w: number) {
-  return `/.netlify/images?url=${encodeURIComponent(src)}&w=${w}&fm=webp&q=80`
+  void w
+  return src
 }
 
 /** Flat 2D gold coin with a soft gradient, rim and glow. */
@@ -131,7 +132,7 @@ export const BrainrotCard = memo(function BrainrotCard({
       <span className="absolute inset-x-0 bottom-0 h-1" style={{ background: t.color }} />
       <div className="flex w-full items-center justify-between gap-1">
         <span className="text-[9px] font-extrabold uppercase tracking-wider" style={{ color: t.color }}>
-          {b.rarity}
+          {t.label}
         </span>
         {chance !== undefined && <span className="text-[9px] font-bold text-white/55">{formatChance(chance)}</span>}
       </div>
