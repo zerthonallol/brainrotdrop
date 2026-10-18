@@ -136,7 +136,7 @@ export const BrainrotCard = memo(function BrainrotCard({
         </span>
         {chance !== undefined && <span className="text-[9px] font-bold text-white/55">{formatChance(chance)}</span>}
       </div>
-      <BrainrotImg b={b} size={compact ? 64 : 84} className="my-1 transition-transform duration-300 group-hover:scale-110" />
+      <BrainrotImg b={b} size={compact ? 64 : 84} eager={compact} className="my-1 transition-transform duration-300 group-hover:scale-110" />
       <div className={cn("w-full truncate text-center font-bold", compact ? "text-[11px]" : "text-xs")}>{b.name}</div>
       <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-1">
         <CoinAmount value={b.price} size={13} className="text-xs" />

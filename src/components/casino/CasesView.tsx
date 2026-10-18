@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { Clock, Gift, Lock, Share2, Sparkles, Tag, Users, X, Zap } from "lucide-react"
 import { toast } from "sonner"
 import { CASES, TAG, rollCase, sortedEntries, type CaseDef, type Drop } from "@/data/cases"
@@ -52,7 +53,7 @@ export function CasesView() {
           ))}
         </div>
       </section>
-      {open && <CaseModal c={open} onClose={() => setOpen(null)} />}
+      {open && typeof document !== "undefined" && createPortal(<CaseModal c={open} onClose={() => setOpen(null)} />, document.body)}
     </div>
   )
 }
@@ -160,6 +161,7 @@ function CaseModal({ c, onClose }: { c: CaseDef; onClose: () => void }) {
     setOffset(0)
     setStrip(next)
     setSpinning(true)
+    viewport.current?.scrollIntoView({ block: "center", behavior: "smooth" })
     const width = viewport.current?.clientWidth ?? 360
     const jitter = (Math.random() - 0.5) * (CELL - 24)
     const target = 4 + WIN_INDEX * CELL - width / 2 + (CELL - 8) / 2 + jitter
@@ -187,7 +189,7 @@ function CaseModal({ c, onClose }: { c: CaseDef; onClose: () => void }) {
     spinning || (c.kind === "paid" ? !store.canAfford(c.price) : Boolean(gate) || cooldownLeft > 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#07040f]/95 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-[#07040f]/95 backdrop-blur-sm">
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4 no-scrollbar">
         <div className="flex items-center justify-between">
           <div>
